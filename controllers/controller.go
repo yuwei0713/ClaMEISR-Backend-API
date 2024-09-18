@@ -34,8 +34,18 @@ func ShowDetail(SearchTitle string, Permission string) gin.HandlerFunc {
 		var requestBody map[string]map[string]string
 		c.BindJSON(&requestBody)
 		Keyvalue := requestBody["Param"]["Keyvalue"]
-		Basic, Detail := models.DetailSearch(SearchTitle, Permission, Keyvalue)
-		c.JSON(200, gin.H{"BasicData": Basic, "DetailData": Detail})
+		Basic, Detail, School := models.DetailSearch(SearchTitle, Permission, Keyvalue)
+		c.JSON(200, gin.H{"BasicData": Basic, "DetailData": Detail, "SchoolData": School})
+	}
+}
+func ChildManage(Motivation string, Permission string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if Motivation == "Update" {
+			var FormData map[string]interface{}
+			c.BindJSON(&FormData)
+			result := models.UpdateChildInfo(FormData)
+			c.JSON(200, gin.H{"status": result})
+		}
 	}
 }
 func UserManage(Motivation string, Permission string) gin.HandlerFunc {
@@ -44,6 +54,11 @@ func UserManage(Motivation string, Permission string) gin.HandlerFunc {
 		// var Message string
 		if Motivation == "Search" {
 			UserData, AdditionalText = models.SearchUserData(Permission)
+		} else if Motivation == "Update" {
+			var FormData map[string]interface{}
+			c.BindJSON(&FormData)
+			result := models.UpdateUserData(FormData, Permission)
+			c.JSON(200, gin.H{"status": result})
 		} else {
 			var requestBody map[string]map[string]string
 			c.BindJSON(&requestBody)
@@ -68,7 +83,7 @@ func SchoolManage(Motivation string, Permission string) gin.HandlerFunc {
 				models.InsertSchool(requestBody, Permission)
 			}
 			if Motivation == "Delete" {
-
+				models.DeleteSchool(requestBody, Permission)
 			}
 		}
 		c.JSON(200, gin.H{"SchoolData": SchoolData, "DetailData": AdditionalText})

@@ -19,9 +19,11 @@ type FrontendUsers struct {
 	CreateAt   string `json:"CreateAt" gorm:"column:created_at"`
 }
 type BackendUsers struct {
-	Account    string `json:"Account"`
-	Username   string `json:"Username"`
-	Permission string `json:"Permission"`
+	Account    string `json:"Account" gorm:"account"`
+	Username   string `json:"username" gorm:"username"`
+	SchoolCode string `json:"SchoolCode"`
+	Password   string `json:"Password"`
+	Permission int    `json:"Permission"`
 }
 
 type Schools struct {
@@ -39,7 +41,9 @@ type Child struct {
 	Year        int    `json:"Year"`
 	Semester    string `json:"Semester"`
 	SchoolName  string `json:"SchoolName"`
+	SchoolCode  int    `json:"SchoolCode" gprm:"column:SchoolCode"`
 	ClassName   string `json:"ClassName"`
+	ClassCode   int    `json:"ClassCode" gorm:"column:ClassCode"`
 	StudentCode int    `json:"StudentCode"`
 	StudentName string `json:"ChildName"`
 	BirthDay    string `json:"BirthDay"`

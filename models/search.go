@@ -53,14 +53,14 @@ func SearchData(SearchType string, Permission string) any {
 		return false
 	}
 }
-func DetailSearch(SearchType string, Permission string, Keyvalue string) (any, any) {
+func DetailSearch(SearchType string, Permission string, Keyvalue string) (any, any, any) {
 	var db = Routines.MeisrDB
 	if SearchType == "Teacher" {
 		var users types.SearchUsers
 		db.Table("userdatatable, schooltable").Select("DISTINCT userdatatable.*, schooltable.SchoolName").Where("userdatatable.IfFill = ?", 1).Where("userdatatable.SchoolCode = schooltable.SchoolCode").Where("userdatatable.Username = ?", Keyvalue).Take(&users)
 		var BasicChild = make([]types.Child, 0)
 		db.Table("studentschooltable as childbasic").Select("childbasic.*").Where("childbasic.TeacherAccount = ?", Keyvalue).Find(&BasicChild)
-		return users, BasicChild
+		return users, BasicChild, nil
 	} else if SearchType == "Children" {
 		var ChildAllData types.ChildDetail
 		var Child types.Child
@@ -98,7 +98,13 @@ func DetailSearch(SearchType string, Permission string, Keyvalue string) (any, a
 			}
 		}
 
-		return ChildAllData, FillData
+		var SchoolData types.Schools
+		db.Table("schooltable").Select("DISTINCT SchoolName ,SchoolCode").Where("SchoolCode = ?", Child.SchoolCode).Find(&SchoolData)
+		var EachClass = make([]types.Classes, 0)
+		db.Table("schooltable").Select("ClassCode, ClassName").Where("SchoolCode", SchoolData.SchoolCode).Find(&EachClass)
+		SchoolData.Classes = EachClass
+
+		return ChildAllData, FillData, SchoolData
 	} else if SearchType == "FillResult" {
 		var QuestionFill types.QuestionFill
 		var QuestionGrade types.QuestionGrade
@@ -134,9 +140,9 @@ func DetailSearch(SearchType string, Permission string, Keyvalue string) (any, a
 		QuestionGrade.QuestionBasicGrade = QuestionBasicGrade
 		QuestionGrade.QuestionDetailGrade = QuestionDetailGrade
 		QuestionGrade.QuestionResult = QuestionResult
-		return QuestionFill, QuestionGrade
+		return QuestionFill, QuestionGrade, nil
 
 	} else {
-		return false, nil
+		return false, nil, nil
 	}
 }

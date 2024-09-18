@@ -1,8 +1,11 @@
 package routers
 
 import (
+	"encoding/gob"
 	"ginapi/controllers"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,6 +13,18 @@ var Router *gin.Engine
 
 func InitRouters() *gin.Engine {
 	Router = gin.New()
+
+	// using gob.Register create map for cookie store own data
+	gob.Register(map[string]interface{}{})
+
+	// create new cookie store，set secret key
+	store := cookie.NewStore([]byte("secret"))
+	Router.Use(sessions.Sessions("auth-session", store))
+
+	Router.POST("/Login", controllers.Login)
+	Router.POST("/Register", controllers.Register)
+	// Router.POST("/Logout")
+
 	DashBoardRoute := Router.Group("/")
 	{
 		DashBoardRoute.GET("/", func(c *gin.Context) {
@@ -31,6 +46,7 @@ func InitRouters() *gin.Engine {
 			{
 				SearchChildrenRoute.GET("/", controllers.ShowSearch("Children", "0"))
 				SearchChildrenRoute.POST("/Child", controllers.ShowDetail("Children", "0"))
+				SearchChildrenRoute.POST("/Update", controllers.ChildManage("Update", "0"))
 			}
 			SearchFillStatusRoute := SearchRouter.Group("/FillStatus")
 			{
@@ -53,7 +69,7 @@ func InitRouters() *gin.Engine {
 			{
 				UserManageRoute.GET("/", controllers.UserManage("Search", "0"))
 				// UserManageRoute.POST("/UserInsert")
-				// UserManageRoute.POST("/UserUpdate")
+				UserManageRoute.POST("/UserUpdate", controllers.UserManage("Update", "0"))
 				// UserManageRoute.POST("/UserDelete")
 			}
 			SchoolManageRoute := ManageRouter.Group("/Schools")
@@ -64,7 +80,7 @@ func InitRouters() *gin.Engine {
 				// SchoolManageRoute.POST("/SchoolDelete")
 				SchoolManageRoute.POST("/ClassInsert", controllers.SchoolManage("Insert", "0"))
 				SchoolManageRoute.POST("/ClassUpdate", controllers.SchoolManage("Update", "0"))
-				// SchoolManageRoute.POST("/ClassDelete")
+				SchoolManageRoute.POST("/ClassDelete", controllers.SchoolManage("Delete", "0"))
 			}
 		}
 	}

@@ -59,3 +59,18 @@ func UpdateSchool(DealData map[string]map[string]string, Permission string) {
 		fmt.Print(result)
 	}
 }
+func DeleteSchool(DealData map[string]map[string]string, Permission string) {
+	var db = Routines.MeisrDB
+	Target := DealData["Param"]["Target"]
+	if Target == "Class" {
+		SchoolCode, _ := strconv.Atoi(DealData["Param"]["SchoolCode"])
+		ClassCode, _ := strconv.Atoi(DealData["Param"]["ClassCode"])
+		result := db.Exec("DELETE from schooltable WHERE SchoolCode = ? AND ClassCode = ?", SchoolCode, ClassCode)
+		fmt.Print(result)
+	}
+	if Target == "School" {
+		SchoolCode, _ := strconv.Atoi(DealData["Param"]["SchoolCode"])
+		result := db.Exec("DELETE from schooltable WHERE SchoolCode = ?", SchoolCode)
+		fmt.Print(result)
+	}
+}
