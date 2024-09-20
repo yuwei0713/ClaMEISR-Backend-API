@@ -46,6 +46,7 @@ type Child struct {
 	ClassCode   int    `json:"ClassCode" gorm:"column:ClassCode"`
 	StudentCode int    `json:"StudentCode"`
 	StudentName string `json:"ChildName"`
+	Gender      string `json:"Gender"`
 	BirthDay    string `json:"BirthDay"`
 	Age         int    `json:"Age"`
 	TeacherName string `json:"TeacherName"`

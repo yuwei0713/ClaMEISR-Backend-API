@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"ginapi/models"
+	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -87,5 +89,39 @@ func SchoolManage(Motivation string, Permission string) gin.HandlerFunc {
 			}
 		}
 		c.JSON(200, gin.H{"SchoolData": SchoolData, "DetailData": AdditionalText})
+	}
+}
+func ExportToExcel() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		yearSemester := c.Query("year_semester")
+
+		// 檢查參數是否存在
+		if yearSemester == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing year_semester parameter"})
+			return
+		}
+		// 將 year_semester 分成 Year 和 Semester
+		split := strings.Split(yearSemester, "-")
+		if len(split) != 2 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid year_semester format"})
+			return
+		}
+
+		Year := strings.TrimSpace(split[0])
+		Semester := strings.TrimSpace(split[1])
+		// 調用模型函數產生Excel檔案
+		excelFile := models.DefaultExport(Year, Semester)
+		// 設置回應標頭來使瀏覽器下載Excel檔案
+		c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+		c.Header("Content-Disposition", "attachment;filename=sample.xlsx")
+		c.Header("File-Name", "sample.xlsx")
+		c.Header("Content-Transfer-Encoding", "binary")
+		c.Header("Expires", "0")
+
+		// 將Excel寫入HTTP回應
+		if err := excelFile.Write(c.Writer); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write Excel file"})
+			return
+		}
 	}
 }

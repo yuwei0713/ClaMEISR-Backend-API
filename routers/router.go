@@ -53,15 +53,15 @@ func InitRouters() *gin.Engine {
 				SearchFillStatusRoute.GET("/", controllers.ShowSearch("FillStatus", "0"))
 				SearchFillStatusRoute.POST("/DetailData", controllers.ShowDetail("FillResult", "0"))
 			}
-			// 	DataExportRoute := Router.Group("/DataExport")
-			// 	{
-			// 		DataExportRoute.POST("/")
-			// 		CustomizeExportRoute := Router.Group("/Customize")
-			// 		{
-			// 			CustomizeExportRoute.GET("/")
-			// 			CustomizeExportRoute.POST("/")
-			// 		}
-			// 	}
+			DataExportRoute := Router.Group("/DataExport")
+			{
+				DataExportRoute.GET("", controllers.ExportToExcel())
+				// CustomizeExportRoute := Router.Group("/Customize")
+				// {
+				// 	CustomizeExportRoute.GET("/")
+				// 	CustomizeExportRoute.POST("/")
+				// }
+			}
 		}
 		ManageRouter := Router.Group("/Manage")
 		{

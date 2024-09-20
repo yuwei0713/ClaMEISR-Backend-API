@@ -33,13 +33,9 @@ func InsertSchool(DealData map[string]map[string]string, Permission string) {
 	if Target == "School" {
 		fmt.Println("Get in!")
 		SchoolName := DealData["Param"]["SchoolName"]
-		fmt.Println("Get SchoolName!", SchoolName)
 		SchoolCode, _ := strconv.Atoi(DealData["Param"]["SchoolCode"])
-		fmt.Println("Get SchoolCode!", SchoolCode)
 		DefaultClassName := DealData["Param"]["ClassName"]
-		fmt.Println("Get ClassName!", DefaultClassName)
 		ClassesNumber, _ := strconv.Atoi(DealData["Param"]["ClassesNumber"])
-		fmt.Println("Get Classes Number!", ClassesNumber)
 
 		for ClassCode := 1; ClassCode <= ClassesNumber; ClassCode++ {
 			ClassName := string(DefaultClassName + strconv.Itoa(ClassCode))
