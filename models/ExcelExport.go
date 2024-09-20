@@ -115,7 +115,8 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 				//Main Sheet Done, Create Questionnaire Grade Sheet
 				QuestionnaireSheet := fmt.Sprintf("%s-%s-次數%d", ExcelExportData.ChildDetail.Child.StudentName, ExcelExportData.FillData.QuestionName, ExcelExportData.FillData.FillTime)
 				ExcelFile.NewSheet(QuestionnaireSheet)
-				ExcelFile.SetCellHyperLink(MainSheet, fmt.Sprintf("G%d", AreaCell-1), fmt.Sprintf("%s!A1", QuestionnaireSheet), "Location")
+				ExcelFile.SetCellHyperLink(MainSheet, fmt.Sprintf("G%d", AreaCell-1), fmt.Sprintf("'%s'!A1", QuestionnaireSheet), "Location")
+				ExcelFile.SetCellHyperLink(MainSheet, fmt.Sprintf("F%d", AreaCell-1), fmt.Sprintf("'%s'!A1", QuestionnaireSheet), "Location")
 				var SubSheet_ChartCellStart int
 				//Back to Main Sheet
 				ExcelFile.SetCellValue(QuestionnaireSheet, "A1", "回總表")
