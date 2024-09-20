@@ -9,7 +9,7 @@ type ExcelExportData struct { //final struct
 type Excel_FillStore struct {
 	StudentID    string `json:"StudentID"`
 	QuestionCode int    `json:"QuestionCode"`
-	Year         int    `json:"SchoolYear"`
+	Year         int    `json:"SchoolYear" gorm:"column:SchoolYear"`
 	Semester     string `json:"Semester"`
 	FillTime     int    `json:"FillTime" gorm:"column:fill_time_adjusted"`
 }

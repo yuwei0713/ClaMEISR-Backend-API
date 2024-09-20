@@ -6,7 +6,6 @@ import (
 	"ginapi/types"
 	"log"
 	"strconv"
-
 	"github.com/xuri/excelize/v2"
 )
 
@@ -30,7 +29,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 
 	var EachSchool types.Excel_SchoolData
 	//get all school code without '其他'
-	schoolrow, _ := db.Table("schooltable").Select("DISTINCT SchoolName ,SchoolCode").Where("SchoolCode != 99").Rows()
+	schoolrow, _ := db.Table("schooltable").Select("*").Where("SchoolCode != 99").Rows()
 	YearAndSemesterCell := 1 //學年期行數Cell
 	YearAndSemester := fmt.Sprintf("%s-%s", Year, Semester)
 	ExcelFile.SetCellValue(MainSheet, fmt.Sprintf("A%d", YearAndSemesterCell), YearAndSemester) //A1
@@ -45,7 +44,9 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 		"G": "次數",
 		"H": "日期",
 	}
-	for CellName, CellValue := range MainArea {
+	MainArea_orderedKeys := []string{"B", "C", "D", "E", "F", "G", "H"}
+	for _, CellName := range MainArea_orderedKeys {
+		CellValue := MainArea[CellName]
 		ExcelFile.SetCellValue(MainSheet, fmt.Sprintf("%s%d", CellName, AreaCell), CellValue)
 	}
 	AreaCell++ // +1 start content
@@ -97,7 +98,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 				*/
 				ContentValue := [...]string{EachSchool.SchoolName, EachSchool.ClassName, ExcelExportData.ChildDetail.Child.TeacherName, ExcelExportData.ChildDetail.Child.StudentName, ExcelExportData.FillData.QuestionName, strconv.Itoa(ExcelExportData.FillData.FillTime), ExcelExportData.FillData.FillDate}
 				i := 0
-				for CellName := range MainArea {
+				for _, CellName := range MainArea_orderedKeys {
 					ExcelFile.SetCellValue(MainSheet, fmt.Sprintf("%s%d", CellName, AreaCell), ContentValue[i])
 					i++
 				}
@@ -108,7 +109,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 				var SubSheet_ChartCellStart int
 				//Back to Main Sheet
 				ExcelFile.SetCellValue(QuestionnaireSheet, "A1", "回總表")
-				ExcelFile.SetCellHyperLink(QuestionnaireSheet, "A1", fmt.Sprintf("%s!A%d", "MainSheet", (AreaCell-1)), "Location")
+				ExcelFile.SetCellHyperLink(QuestionnaireSheet, "A1", fmt.Sprintf("%s!A%d", "總表", (AreaCell-1)), "Location")
 				SubSheet_StudentArea := map[string]string{
 					"A": "學校",
 					"B": "班級",
@@ -121,7 +122,9 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					"I": "第幾次填寫",
 					"J": "填寫日期",
 				}
-				for CellName, CellValue := range SubSheet_StudentArea {
+				SubSheet_StudentArea_OrderedKeys := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J"}
+				for _, CellName := range SubSheet_StudentArea_OrderedKeys {
+					CellValue := SubSheet_StudentArea[CellName]
 					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), CellValue)
 				}
 				SubSheetCell++
@@ -154,7 +157,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 				SubSheet_StudentContent = append(SubSheet_StudentContent, strconv.Itoa(ExcelExportData.FillData.FillTime))
 				SubSheet_StudentContent = append(SubSheet_StudentContent, ExcelExportData.FillData.FillDate)
 				Contentlenth := 0
-				for CellName := range SubSheet_StudentArea {
+				for _, CellName := range SubSheet_StudentArea_OrderedKeys {
 					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_StudentContent[Contentlenth])
 					Contentlenth++
 				}
@@ -169,29 +172,33 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					"E": "作息全部的題數",
 					"F": "作息整體的精熟度",
 				}
-				for CellName, CellValue := range SubSheet_MainArea {
+				
+				SubSheet_MainArea_OrderedKeys := []string{"A", "B", "C", "D", "E", "F"}  // 指定鍵的順序
+				
+				for _, CellName := range SubSheet_MainArea_OrderedKeys {
+					CellValue := SubSheet_MainArea[CellName]
 					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), CellValue)
 				}
 				SubSheetCell++
-				for TopicLength := 1; TopicLength <= len(ExcelExportData.QuestionGrade.QuestionBasicGrade); TopicLength++ {
-					var SubSheet_BasicGrade []string
-					if TopicLength == len(ExcelExportData.QuestionGrade.QuestionBasicGrade) { //use topiclength 0
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuesitonContent[0].BigTopicName)
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, strconv.Itoa(ExcelExportData.QuestionGrade.QuestionBasicGrade[0].ThreePoint))
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, strconv.Itoa(ExcelExportData.QuestionGrade.QuestionBasicGrade[0].FillByAge))
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, strconv.FormatFloat(float64(ExcelExportData.QuestionGrade.QuestionBasicGrade[0].AgeProficientPercent), 'f', -1, 32))
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, strconv.Itoa(ExcelExportData.QuestionGrade.QuestionBasicGrade[0].FillByAll))
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, strconv.FormatFloat(float64(ExcelExportData.QuestionGrade.QuestionBasicGrade[0].AllProficientPercent), 'f', -1, 32))
+				for TopicLength := 0; TopicLength < len(ExcelExportData.QuestionGrade.QuestionBasicGrade); TopicLength++ {
+					var SubSheet_BasicGrade []any
+					if TopicLength == (len(ExcelExportData.QuestionGrade.QuestionBasicGrade) - 1) { //use topiclength 0
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, "總和")
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuestionBasicGrade[0].ThreePoint)
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuestionBasicGrade[0].FillByAge)
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuestionBasicGrade[0].AgeProficientPercent)
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuestionBasicGrade[0].FillByAll)
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuestionBasicGrade[0].AllProficientPercent)
 					} else {
 						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuesitonContent[TopicLength].BigTopicName)
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, strconv.Itoa(ExcelExportData.QuestionGrade.QuestionBasicGrade[TopicLength].ThreePoint))
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, strconv.Itoa(ExcelExportData.QuestionGrade.QuestionBasicGrade[TopicLength].FillByAge))
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, strconv.FormatFloat(float64(ExcelExportData.QuestionGrade.QuestionBasicGrade[TopicLength].AgeProficientPercent), 'f', -1, 32))
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, strconv.Itoa(ExcelExportData.QuestionGrade.QuestionBasicGrade[TopicLength].FillByAll))
-						SubSheet_BasicGrade = append(SubSheet_BasicGrade, strconv.FormatFloat(float64(ExcelExportData.QuestionGrade.QuestionBasicGrade[TopicLength].AllProficientPercent), 'f', -1, 32))
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuestionBasicGrade[TopicLength+1].ThreePoint)
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuestionBasicGrade[TopicLength+1].FillByAge)
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuestionBasicGrade[TopicLength+1].AgeProficientPercent)
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuestionBasicGrade[TopicLength+1].FillByAll)
+						SubSheet_BasicGrade = append(SubSheet_BasicGrade, ExcelExportData.QuestionGrade.QuestionBasicGrade[TopicLength+1].AllProficientPercent)
 					}
 					Contentlenth := 0
-					for CellName := range SubSheet_StudentArea {
+					for _, CellName := range SubSheet_MainArea_OrderedKeys {
 						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_BasicGrade[Contentlenth])
 						Contentlenth++
 					}
@@ -199,29 +206,29 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 				}
 				SubSheetCell++
 				// SubSheet_MainChart
-				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", SubSheet_ChartCellStart), &excelize.Chart{
-					Type: excelize.Line,
+				if err := ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", SubSheet_ChartCellStart), &excelize.Chart{
+					Type: excelize.Col,
 					Series: []excelize.ChartSeries{
 						{
-							Name:       fmt.Sprintf("%s!$D$%d", QuestionnaireSheet, SubSheet_ChartCellStart),
-							Categories: fmt.Sprintf("%s!$A$%d:$A$%d", QuestionnaireSheet, (SubSheet_ChartCellStart + 1), (SubSheetCell - 2)),
-							Values:     fmt.Sprintf("%s!$D$%d:$D$%d", QuestionnaireSheet, (SubSheet_ChartCellStart + 1), (SubSheetCell - 2)),
+							Name:       fmt.Sprintf("'%s'!$D$%d", QuestionnaireSheet, SubSheet_ChartCellStart),
+							Categories: fmt.Sprintf("'%s'!$A$%d:$A$%d", QuestionnaireSheet, (SubSheet_ChartCellStart + 1), (SubSheetCell - 2)),
+							Values:     fmt.Sprintf("'%s'!$D$%d:$D$%d", QuestionnaireSheet, (SubSheet_ChartCellStart + 1), (SubSheetCell - 2)),
 							Line: excelize.ChartLine{
 								Smooth: true,
 							},
 						},
 						{
-							Name:       fmt.Sprintf("%s!$F$%d", QuestionnaireSheet, SubSheet_ChartCellStart),
-							Categories: fmt.Sprintf("%s!$A$%d:$A$%d", QuestionnaireSheet, (SubSheet_ChartCellStart + 1), (SubSheetCell - 2)),
-							Values:     fmt.Sprintf("%s!$F$%d:$F$%d", QuestionnaireSheet, (SubSheet_ChartCellStart + 1), (SubSheetCell - 2)),
+							Name:       fmt.Sprintf("'%s'!$F$%d", QuestionnaireSheet, SubSheet_ChartCellStart),
+							Categories: fmt.Sprintf("'%s'!$A$%d:$A$%d", QuestionnaireSheet, (SubSheet_ChartCellStart + 1), (SubSheetCell - 2)),
+							Values:     fmt.Sprintf("'%s'!$F$%d:$F$%d", QuestionnaireSheet, (SubSheet_ChartCellStart + 1), (SubSheetCell - 2)),
 							Line: excelize.ChartLine{
 								Smooth: true,
 							},
 						},
 					},
 					Format: excelize.GraphicOptions{
-						OffsetX: 15,
-						OffsetY: 100,
+						ScaleX: 2.5,
+						ScaleY: 1.5,
 					},
 					Legend: excelize.ChartLegend{
 						Position: "top",
@@ -231,16 +238,32 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 							Text: "問卷分數",
 						},
 					},
+					XAxis: excelize.ChartAxis{
+						Font: excelize.Font{
+						    Bold:      true,
+						    Italic:    true,
+						    Color:     "#000000",
+						},
+					},
+					YAxis: excelize.ChartAxis{
+						Font: excelize.Font{
+						    Bold:      false,
+						    Italic:    false,
+						    Color:     "#777777",
+						},
+					},
 					PlotArea: excelize.ChartPlotArea{
 						ShowCatName:     false,
 						ShowLeaderLines: false,
 						ShowPercent:     true,
-						ShowSerName:     true,
+						ShowSerName:     false,
 						ShowVal:         true,
 					},
-					ShowBlanksAs: "zero",
+					ShowBlanksAs: "gap",
 				})
-
+				err != nil {
+					fmt.Println(err)
+				}
 				// Classify Detail
 				Func_E := make(map[int]types.QuestionDetailGrade)
 				Func_I := make(map[int]types.QuestionDetailGrade)
@@ -290,16 +313,20 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 				}
 				// SubSheet_FuncArea
 				SubSheet_ChartCellStart = SubSheetCell
-				SubSheet_FuncArea := map[string]string{
+				SubSheet_DetailArea := map[string]string{
 					"A": "ClaMEISR 作息類別 (各類作息的題數)",
 					"B": "成效領域名稱",
 					"C": "作息被為評 3 分的題數",
 					"D": "作息符合年齡的所有題數",
 					"E": "符合年齡的精熟度",
 					"F": "作息全部的題數",
-					"H": "作息整體的精熟度",
+					"G": "作息整體的精熟度",
 				}
-				for CellName, CellValue := range SubSheet_FuncArea {
+				
+				SubSheet_DetailArea_OrderedKeys := []string{"A", "B", "C", "D", "E", "F", "G"}  // 指定有序的鍵列表
+				
+				for _, CellName := range SubSheet_DetailArea_OrderedKeys {
+					CellValue := SubSheet_DetailArea[CellName]
 					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), CellValue)
 				}
 				SubSheetCell++
@@ -308,345 +335,380 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 						FuncTopicLength = 0
 					}
 					TopicStartCell := SubSheetCell
-					var SubSheet_Func_E_Grade []string
+					var SubSheet_Func_E_Grade []any
 					var Contentlenth = 0
 					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, Func_E[FuncTopicLength].DetailName)
-					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, strconv.Itoa(Func_E[FuncTopicLength].ThreePoint))
-					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, strconv.Itoa(Func_E[FuncTopicLength].FillByAge))
-					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, strconv.FormatFloat(float64(Func_E[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, strconv.Itoa(Func_E[FuncTopicLength].FillByAll))
-					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, strconv.FormatFloat(float64(Func_E[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, Func_E[FuncTopicLength].ThreePoint)
+					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, Func_E[FuncTopicLength].FillByAge)
+					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, Func_E[FuncTopicLength].AgeProficientPercent)
+					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, Func_E[FuncTopicLength].FillByAll)
+					SubSheet_Func_E_Grade = append(SubSheet_Func_E_Grade, Func_E[FuncTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Func_E_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
 					SubSheetCell++
-					var SubSheet_Func_I_Grade []string
+					var SubSheet_Func_I_Grade []any
 					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, Func_I[FuncTopicLength].DetailName)
-					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, strconv.Itoa(Func_I[FuncTopicLength].ThreePoint))
-					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, strconv.Itoa(Func_I[FuncTopicLength].FillByAge))
-					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, strconv.FormatFloat(float64(Func_I[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, strconv.Itoa(Func_I[FuncTopicLength].FillByAll))
-					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, strconv.FormatFloat(float64(Func_I[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, Func_I[FuncTopicLength].ThreePoint)
+					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, Func_I[FuncTopicLength].FillByAge)
+					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, Func_I[FuncTopicLength].AgeProficientPercent)
+					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, Func_I[FuncTopicLength].FillByAll)
+					SubSheet_Func_I_Grade = append(SubSheet_Func_I_Grade, Func_I[FuncTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Func_I_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
 					SubSheetCell++
-					var SubSheet_Func_SR_Grade []string
+					var SubSheet_Func_SR_Grade []any
 					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, Func_SR[FuncTopicLength].DetailName)
-					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, strconv.Itoa(Func_SR[FuncTopicLength].ThreePoint))
-					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, strconv.Itoa(Func_SR[FuncTopicLength].FillByAge))
-					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, strconv.FormatFloat(float64(Func_SR[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, strconv.Itoa(Func_SR[FuncTopicLength].FillByAll))
-					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, strconv.FormatFloat(float64(Func_SR[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, Func_SR[FuncTopicLength].ThreePoint)
+					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, Func_SR[FuncTopicLength].FillByAge)
+					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, Func_SR[FuncTopicLength].AgeProficientPercent)
+					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, Func_SR[FuncTopicLength].FillByAll)
+					SubSheet_Func_SR_Grade = append(SubSheet_Func_SR_Grade, Func_SR[FuncTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Func_SR_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
-					SubSheetCell++
 					TopicEndCell := SubSheetCell
 					//Combine A Cell
 					ExcelFile.MergeCell(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), fmt.Sprintf("A%d", TopicEndCell))
-					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), ExcelExportData.QuestionGrade.QuesitonContent[FuncTopicLength].QuestionName)
+					if(FuncTopicLength != 0){
+						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), ExcelExportData.QuestionGrade.QuesitonContent[FuncTopicLength-1].BigTopicName)
+					}else{
+						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), "總和")
+						SubSheetCell++
+						break
+					}
 					SubSheetCell++
 				}
 				SubSheetCell++
 				// SubSheet_FuncChart
-				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", SubSheet_ChartCellStart), &excelize.Chart{
-					Type: excelize.Bar,
+				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", (SubSheet_ChartCellStart + 7 )), &excelize.Chart{
+					Type: excelize.Col,
 					Series: []excelize.ChartSeries{
 						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 6)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 6), (SubSheetCell - 6)),
+							Name:       fmt.Sprintf("'%s'!$E$%d", QuestionnaireSheet, (SubSheet_ChartCellStart)),
+							Categories: fmt.Sprintf("'%s'!$B$%d:$B$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 2)),
+							Values:     fmt.Sprintf("'%s'!$E$%d:$E$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 2)),
 						},
 						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 5)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 5), (SubSheetCell - 5)),
-						},
-						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 4)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 4)),
-						},
-						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 3)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 3), (SubSheetCell - 3)),
-						},
-						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 2)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 2), (SubSheetCell - 2)),
+							Name:       fmt.Sprintf("'%s'!$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart)),
+							Categories: fmt.Sprintf("'%s'!$B$%d:$B$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 2)),
+							Values:     fmt.Sprintf("'%s'!$G$%d:$G$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 2)),
 						},
 					},
 					Format: excelize.GraphicOptions{
-						OffsetX: 15,
-						OffsetY: 20,
+						ScaleX: 1.5,
+						ScaleY: 1.5,
 					},
 					Legend: excelize.ChartLegend{
-						Position: "left",
+						Position: "top",
 					},
 					Title: []excelize.RichTextRun{
 						{
 							Text: "Func Chart",
 						},
 					},
+					XAxis: excelize.ChartAxis{
+						Font: excelize.Font{
+						    Bold:      true,
+						    Italic:    true,
+						    Color:     "#000000",
+						},
+					},
+					YAxis: excelize.ChartAxis{
+						Font: excelize.Font{
+						    Bold:      false,
+						    Italic:    false,
+						    Color:     "#777777",
+						},
+					},
 					PlotArea: excelize.ChartPlotArea{
 						ShowCatName:     false,
 						ShowLeaderLines: false,
 						ShowPercent:     true,
-						ShowSerName:     true,
+						ShowSerName:     false,
 						ShowVal:         true,
 					},
 					ShowBlanksAs: "zero",
 				})
 				// SubSheet_DevArea
 				SubSheet_ChartCellStart = SubSheetCell
-				for CellName, CellValue := range SubSheet_FuncArea {
+				for _, CellName := range SubSheet_DetailArea_OrderedKeys {
+					CellValue := SubSheet_DetailArea[CellName]
 					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), CellValue)
 				}
 				SubSheetCell++
-				for FuncTopicLength := 1; FuncTopicLength <= len(Dev_A); FuncTopicLength++ {
-					if FuncTopicLength == len(Dev_A) {
-						FuncTopicLength = 0
+				for DevTopicLength := 1; DevTopicLength <= len(Dev_A); DevTopicLength++ {
+					if DevTopicLength == len(Dev_A) {
+						DevTopicLength = 0
 					}
 					TopicStartCell := SubSheetCell
-					var SubSheet_Dev_A_Grade []string
+					var SubSheet_Dev_A_Grade []any
 					var Contentlenth = 0
-					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, Dev_A[FuncTopicLength].DetailName)
-					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, strconv.Itoa(Dev_A[FuncTopicLength].ThreePoint))
-					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, strconv.Itoa(Dev_A[FuncTopicLength].FillByAge))
-					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, strconv.FormatFloat(float64(Dev_A[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, strconv.Itoa(Dev_A[FuncTopicLength].FillByAll))
-					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, strconv.FormatFloat(float64(Dev_A[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, Dev_A[DevTopicLength].DetailName)
+					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, Dev_A[DevTopicLength].ThreePoint)
+					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, Dev_A[DevTopicLength].FillByAge)
+					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, Dev_A[DevTopicLength].AgeProficientPercent)
+					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, Dev_A[DevTopicLength].FillByAll)
+					SubSheet_Dev_A_Grade = append(SubSheet_Dev_A_Grade, Dev_A[DevTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Dev_A_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
 					SubSheetCell++
-					var SubSheet_Dev_CG_Grade []string
-					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, Dev_CG[FuncTopicLength].DetailName)
-					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, strconv.Itoa(Dev_CG[FuncTopicLength].ThreePoint))
-					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, strconv.Itoa(Dev_CG[FuncTopicLength].FillByAge))
-					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, strconv.FormatFloat(float64(Dev_CG[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, strconv.Itoa(Dev_CG[FuncTopicLength].FillByAll))
-					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, strconv.FormatFloat(float64(Dev_CG[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					var SubSheet_Dev_CG_Grade []any
+					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, Dev_CG[DevTopicLength].DetailName)
+					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, Dev_CG[DevTopicLength].ThreePoint)
+					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, Dev_CG[DevTopicLength].FillByAge)
+					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, Dev_CG[DevTopicLength].AgeProficientPercent)
+					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, Dev_CG[DevTopicLength].FillByAll)
+					SubSheet_Dev_CG_Grade = append(SubSheet_Dev_CG_Grade, Dev_CG[DevTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Dev_CG_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
 					SubSheetCell++
-					var SubSheet_Dev_CM_Grade []string
-					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, Dev_CM[FuncTopicLength].DetailName)
-					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, strconv.Itoa(Dev_CM[FuncTopicLength].ThreePoint))
-					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, strconv.Itoa(Dev_CM[FuncTopicLength].FillByAge))
-					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, strconv.FormatFloat(float64(Dev_CM[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, strconv.Itoa(Dev_CM[FuncTopicLength].FillByAll))
-					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, strconv.FormatFloat(float64(Dev_CM[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					var SubSheet_Dev_CM_Grade []any
+					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, Dev_CM[DevTopicLength].DetailName)
+					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, Dev_CM[DevTopicLength].ThreePoint)
+					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, Dev_CM[DevTopicLength].FillByAge)
+					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, Dev_CM[DevTopicLength].AgeProficientPercent)
+					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, Dev_CM[DevTopicLength].FillByAll)
+					SubSheet_Dev_CM_Grade = append(SubSheet_Dev_CM_Grade, Dev_CM[DevTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Dev_CM_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
 					SubSheetCell++
-					var SubSheet_Dev_M_Grade []string
-					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, Dev_M[FuncTopicLength].DetailName)
-					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, strconv.Itoa(Dev_M[FuncTopicLength].ThreePoint))
-					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, strconv.Itoa(Dev_M[FuncTopicLength].FillByAge))
-					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, strconv.FormatFloat(float64(Dev_M[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, strconv.Itoa(Dev_M[FuncTopicLength].FillByAll))
-					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, strconv.FormatFloat(float64(Dev_M[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					var SubSheet_Dev_M_Grade []any
+					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, Dev_M[DevTopicLength].DetailName)
+					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, Dev_M[DevTopicLength].ThreePoint)
+					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, Dev_M[DevTopicLength].FillByAge)
+					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, Dev_M[DevTopicLength].AgeProficientPercent)
+					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, Dev_M[DevTopicLength].FillByAll)
+					SubSheet_Dev_M_Grade = append(SubSheet_Dev_M_Grade, Dev_M[DevTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Dev_M_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
 					SubSheetCell++
-					var SubSheet_Dev_S_Grade []string
-					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, Dev_S[FuncTopicLength].DetailName)
-					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, strconv.Itoa(Dev_S[FuncTopicLength].ThreePoint))
-					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, strconv.Itoa(Dev_S[FuncTopicLength].FillByAge))
-					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, strconv.FormatFloat(float64(Dev_S[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, strconv.Itoa(Dev_S[FuncTopicLength].FillByAll))
-					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, strconv.FormatFloat(float64(Dev_S[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					var SubSheet_Dev_S_Grade []any
+					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, Dev_S[DevTopicLength].DetailName)
+					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, Dev_S[DevTopicLength].ThreePoint)
+					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, Dev_S[DevTopicLength].FillByAge)
+					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, Dev_S[DevTopicLength].AgeProficientPercent)
+					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, Dev_S[DevTopicLength].FillByAll)
+					SubSheet_Dev_S_Grade = append(SubSheet_Dev_S_Grade, Dev_S[DevTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Dev_S_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
-					SubSheetCell++
+					
 					TopicEndCell := SubSheetCell
 					//Combine A Cell
 					ExcelFile.MergeCell(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), fmt.Sprintf("A%d", TopicEndCell))
-					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), ExcelExportData.QuestionGrade.QuesitonContent[FuncTopicLength].QuestionName)
+					if(DevTopicLength != 0){
+						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), ExcelExportData.QuestionGrade.QuesitonContent[DevTopicLength-1].BigTopicName)
+					}else{
+						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), "總和")
+						SubSheetCell++
+						break
+					}
 					SubSheetCell++
 				}
 				SubSheetCell++
 				// SubSheet_DevChart
-				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", SubSheet_ChartCellStart), &excelize.Chart{
-					Type: excelize.Bar,
+				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", (SubSheet_ChartCellStart + 7 )), &excelize.Chart{
+					Type: excelize.Col,
 					Series: []excelize.ChartSeries{
 						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 4)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 4)),
+							Name:       fmt.Sprintf("'%s'!$E$%d", QuestionnaireSheet, (SubSheet_ChartCellStart)),
+							Categories: fmt.Sprintf("'%s'!$B$%d:$B$%d", QuestionnaireSheet, (SubSheetCell - 6), (SubSheetCell - 2)),
+							Values:     fmt.Sprintf("'%s'!$E$%d:$E$%d", QuestionnaireSheet, (SubSheetCell - 6), (SubSheetCell - 2)),
 						},
 						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 3)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 3), (SubSheetCell - 3)),
-						},
-						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 2)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 2), (SubSheetCell - 2)),
+							Name:       fmt.Sprintf("'%s'!$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart)),
+							Categories: fmt.Sprintf("'%s'!$B$%d:$B$%d", QuestionnaireSheet, (SubSheetCell - 6), (SubSheetCell - 2)),
+							Values:     fmt.Sprintf("'%s'!$G$%d:$G$%d", QuestionnaireSheet, (SubSheetCell - 6), (SubSheetCell - 2)),
 						},
 					},
 					Format: excelize.GraphicOptions{
-						OffsetX: 15,
-						OffsetY: 15,
+						ScaleX: 2,
+						ScaleY: 1.5,
 					},
 					Legend: excelize.ChartLegend{
-						Position: "left",
+						Position: "top",
 					},
 					Title: []excelize.RichTextRun{
 						{
 							Text: "Dev Chart",
 						},
 					},
+					XAxis: excelize.ChartAxis{
+						Font: excelize.Font{
+						    Bold:      true,
+						    Italic:    true,
+						    Color:     "#000000",
+						},
+					},
+					YAxis: excelize.ChartAxis{
+						Font: excelize.Font{
+						    Bold:      false,
+						    Italic:    false,
+						    Color:     "#777777",
+						},
+					},
 					PlotArea: excelize.ChartPlotArea{
 						ShowCatName:     false,
 						ShowLeaderLines: false,
 						ShowPercent:     true,
-						ShowSerName:     true,
+						ShowSerName:     false,
 						ShowVal:         true,
 					},
 					ShowBlanksAs: "zero",
 				})
 				// SubSheet_OutArea
 				SubSheet_ChartCellStart = SubSheetCell
-				for CellName, CellValue := range SubSheet_FuncArea {
+				for _, CellName := range SubSheet_DetailArea_OrderedKeys {
+					CellValue := SubSheet_DetailArea[CellName]
 					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), CellValue)
 				}
 				SubSheetCell++
-				for FuncTopicLength := 1; FuncTopicLength <= len(Out_One); FuncTopicLength++ {
-					if FuncTopicLength == len(Out_One) {
-						FuncTopicLength = 0
+				for OutTopicLength := 1; OutTopicLength <= len(Out_One); OutTopicLength++ {
+					if OutTopicLength == len(Out_One) {
+						OutTopicLength = 0
 					}
 					TopicStartCell := SubSheetCell
-					var SubSheet_Out_One_Grade []string
+					var SubSheet_Out_One_Grade []any
 					var Contentlenth = 0
-					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, Out_One[FuncTopicLength].DetailName)
-					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, strconv.Itoa(Out_One[FuncTopicLength].ThreePoint))
-					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, strconv.Itoa(Out_One[FuncTopicLength].FillByAge))
-					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, strconv.FormatFloat(float64(Out_One[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, strconv.Itoa(Out_One[FuncTopicLength].FillByAll))
-					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, strconv.FormatFloat(float64(Out_One[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, Out_One[OutTopicLength].DetailName)
+					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, Out_One[OutTopicLength].ThreePoint)
+					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, Out_One[OutTopicLength].FillByAge)
+					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, Out_One[OutTopicLength].AgeProficientPercent)
+					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, Out_One[OutTopicLength].FillByAll)
+					SubSheet_Out_One_Grade = append(SubSheet_Out_One_Grade, Out_One[OutTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Out_One_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
 					SubSheetCell++
-					var SubSheet_Out_Two_Grade []string
-					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, Out_Two[FuncTopicLength].DetailName)
-					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, strconv.Itoa(Out_Two[FuncTopicLength].ThreePoint))
-					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, strconv.Itoa(Out_Two[FuncTopicLength].FillByAge))
-					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, strconv.FormatFloat(float64(Out_Two[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, strconv.Itoa(Out_Two[FuncTopicLength].FillByAll))
-					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, strconv.FormatFloat(float64(Out_Two[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					var SubSheet_Out_Two_Grade []any
+					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, Out_Two[OutTopicLength].DetailName)
+					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, Out_Two[OutTopicLength].ThreePoint)
+					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, Out_Two[OutTopicLength].FillByAge)
+					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, Out_Two[OutTopicLength].AgeProficientPercent)
+					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, Out_Two[OutTopicLength].FillByAll)
+					SubSheet_Out_Two_Grade = append(SubSheet_Out_Two_Grade, Out_Two[OutTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Out_Two_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
 					SubSheetCell++
-					var SubSheet_Out_Three_Grade []string
-					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, Out_Three[FuncTopicLength].DetailName)
-					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, strconv.Itoa(Out_Three[FuncTopicLength].ThreePoint))
-					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, strconv.Itoa(Out_Three[FuncTopicLength].FillByAge))
-					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, strconv.FormatFloat(float64(Out_Three[FuncTopicLength].AgeProficientPercent), 'f', -1, 32))
-					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, strconv.Itoa(Out_Three[FuncTopicLength].FillByAll))
-					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, strconv.FormatFloat(float64(Out_Three[FuncTopicLength].AllProficientPercent), 'f', -1, 32))
+					var SubSheet_Out_Three_Grade []any
+					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, Out_Three[OutTopicLength].DetailName)
+					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, Out_Three[OutTopicLength].ThreePoint)
+					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, Out_Three[OutTopicLength].FillByAge)
+					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, Out_Three[OutTopicLength].AgeProficientPercent)
+					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, Out_Three[OutTopicLength].FillByAll)
+					SubSheet_Out_Three_Grade = append(SubSheet_Out_Three_Grade, Out_Three[OutTopicLength].AllProficientPercent)
 					Contentlenth = 0
-					for CellName := range SubSheet_FuncArea {
+					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						if CellName != "A" {
 							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_Out_Three_Grade[Contentlenth])
 							Contentlenth++
 						}
 					}
-					SubSheetCell++
 					TopicEndCell := SubSheetCell
 					//Combine A Cell
 					ExcelFile.MergeCell(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), fmt.Sprintf("A%d", TopicEndCell))
-					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), ExcelExportData.QuestionGrade.QuesitonContent[FuncTopicLength].QuestionName)
+					if(OutTopicLength != 0){
+						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), ExcelExportData.QuestionGrade.QuesitonContent[OutTopicLength-1].BigTopicName)
+						}else{
+							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), "總和")
+							SubSheetCell++
+							break
+						}
 					SubSheetCell++
 				}
 				// SubSheet_OutChart
-				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", SubSheet_ChartCellStart), &excelize.Chart{
-					Type: excelize.Bar,
+				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", (SubSheet_ChartCellStart + 7 )), &excelize.Chart{
+					Type: excelize.Col,
 					Series: []excelize.ChartSeries{
 						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 4)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 4)),
+							Name:       fmt.Sprintf("'%s'!$E$%d", QuestionnaireSheet, (SubSheet_ChartCellStart)),
+							Categories: fmt.Sprintf("'%s'!$B$%d:$B$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 2)),
+							Values:     fmt.Sprintf("'%s'!$E$%d:$E$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 2)),
 						},
 						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 3)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 3), (SubSheetCell - 3)),
-						},
-						{
-							Name:       fmt.Sprintf("%s!$B$%d", QuestionnaireSheet, (SubSheetCell - 2)),
-							Categories: fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart), (SubSheet_ChartCellStart)),
-							Values:     fmt.Sprintf("%s!$E$%d,$G$%d", QuestionnaireSheet, (SubSheetCell - 2), (SubSheetCell - 2)),
+							Name:       fmt.Sprintf("'%s'!$G$%d", QuestionnaireSheet, (SubSheet_ChartCellStart)),
+							Categories: fmt.Sprintf("'%s'!$B$%d:$B$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 2)),
+							Values:     fmt.Sprintf("'%s'!$G$%d:$G$%d", QuestionnaireSheet, (SubSheetCell - 4), (SubSheetCell - 2)),
 						},
 					},
 					Format: excelize.GraphicOptions{
-						OffsetX: 15,
-						OffsetY: 20,
+						ScaleX: 1.5,
+						ScaleY: 1.5,
 					},
 					Legend: excelize.ChartLegend{
-						Position: "left",
+						Position: "top",
 					},
 					Title: []excelize.RichTextRun{
 						{
 							Text: "Out Chart",
 						},
 					},
+					XAxis: excelize.ChartAxis{
+						Font: excelize.Font{
+						    Bold:      true,
+						    Italic:    true,
+						    Color:     "#000000",
+						},
+					},
+					YAxis: excelize.ChartAxis{
+						Font: excelize.Font{
+						    Bold:      false,
+						    Italic:    false,
+						    Color:     "#777777",
+						},
+					},
 					PlotArea: excelize.ChartPlotArea{
 						ShowCatName:     false,
 						ShowLeaderLines: false,
 						ShowPercent:     true,
-						ShowSerName:     true,
+						ShowSerName:     false,
 						ShowVal:         true,
 					},
 					ShowBlanksAs: "zero",
@@ -655,7 +717,6 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 
 		}
 	}
-
 	return ExcelFile
 }
 

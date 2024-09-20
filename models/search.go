@@ -117,7 +117,6 @@ func DetailSearch(SearchType string, Permission string, Keyvalue string) (any, a
 		FillSemester := SearchKey[2]
 		QuestionCode := SearchKey[3]
 		FillTime := SearchKey[4]
-
 		db.Table("studentschooltable as childbasic, userdatatable as user").Select("childbasic.* ,user.TeacherName as TeacherName").Where("childbasic.SchoolCode = user.SchoolCode").Where("childbasic.TeacherAccount = user.Username").Where("childbasic.StudentID = ?", StudentID).Take(&Child)
 		db.Table("questionstoretable as filldata, questionnaireframework as questiondata").Select("filldata.SchoolYear as FillYear, filldata.Semester as FillSemester, filldata.FillTime, filldata.FillDate, questiondata.QuestionCode, questiondata.QuestionName").Where("filldata.StudentID = ?", StudentID).Where("filldata.SchoolYear = ?", FillYear).Where("filldata.Semester = ?", FillSemester).Where("filldata.FillTime = ?", FillTime).Where("filldata.QuestionCode = ? ", QuestionCode).Take(&FillData)
 		QuestionFill.Child = Child
