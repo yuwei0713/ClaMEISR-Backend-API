@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"ginapi/models"
 	"net/http"
 	"strconv"
@@ -114,7 +115,7 @@ func ExportToExcel() gin.HandlerFunc {
 		// 設置回應標頭來使瀏覽器下載Excel檔案
 		c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 		c.Header("Content-Disposition", "attachment;filename=sample.xlsx")
-		c.Header("File-Name", "sample.xlsx")
+		c.Header("File-Name", fmt.Sprintf("ClaMEISR 資料分析表_%s-%s.xlsx", Year, Semester))
 		c.Header("Content-Transfer-Encoding", "binary")
 		c.Header("Expires", "0")
 

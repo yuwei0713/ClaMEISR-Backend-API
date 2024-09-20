@@ -6,6 +6,8 @@ import (
 	"ginapi/types"
 	"log"
 	"strconv"
+	"time"
+
 	"github.com/xuri/excelize/v2"
 )
 
@@ -96,7 +98,14 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					B ~ H + TitleCell 標題(學校，班級，教師，學生，問卷，次數，日期)
 					(J)K ~ N + TotalCountCell 總數(學校名稱，班級數，教師數，學生數)，最後一行放入總和(學校數，班級數，教師數，學生數)
 				*/
-				ContentValue := [...]string{EachSchool.SchoolName, EachSchool.ClassName, ExcelExportData.ChildDetail.Child.TeacherName, ExcelExportData.ChildDetail.Child.StudentName, ExcelExportData.FillData.QuestionName, strconv.Itoa(ExcelExportData.FillData.FillTime), ExcelExportData.FillData.FillDate}
+
+				layout := time.RFC3339 // 標準時間格式
+				t, err := time.Parse(layout, ExcelExportData.FillData.FillDate)
+				if err != nil {
+					fmt.Println("Error parsing date:", err)
+				}
+				Date_Output := t.Format("2006-01-02") // 轉換為 YYYY-MM-DD 格式
+				ContentValue := [...]string{EachSchool.SchoolName, EachSchool.ClassName, ExcelExportData.ChildDetail.Child.TeacherName, ExcelExportData.ChildDetail.Child.StudentName, ExcelExportData.FillData.QuestionName, strconv.Itoa(ExcelExportData.FillData.FillTime), Date_Output}
 				i := 0
 				for _, CellName := range MainArea_orderedKeys {
 					ExcelFile.SetCellValue(MainSheet, fmt.Sprintf("%s%d", CellName, AreaCell), ContentValue[i])
@@ -106,6 +115,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 				//Main Sheet Done, Create Questionnaire Grade Sheet
 				QuestionnaireSheet := fmt.Sprintf("%s-%s-次數%d", ExcelExportData.ChildDetail.Child.StudentName, ExcelExportData.FillData.QuestionName, ExcelExportData.FillData.FillTime)
 				ExcelFile.NewSheet(QuestionnaireSheet)
+				ExcelFile.SetCellHyperLink(MainSheet, fmt.Sprintf("G%d", AreaCell-1), fmt.Sprintf("%s!A1", QuestionnaireSheet), "Location")
 				var SubSheet_ChartCellStart int
 				//Back to Main Sheet
 				ExcelFile.SetCellValue(QuestionnaireSheet, "A1", "回總表")
@@ -153,9 +163,11 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					SubSheet_StudentContent = append(SubSheet_StudentContent, "一般生")
 					SubSheet_StudentContent = append(SubSheet_StudentContent, "無")
 				}
-				SubSheet_StudentContent = append(SubSheet_StudentContent, ExcelExportData.ChildDetail.Child.BirthDay)
+				t, _ = time.Parse(layout, ExcelExportData.ChildDetail.Child.BirthDay)
+				BirthDay_Output := t.Format("2006-01-02") // 轉換為 YYYY-MM-DD 格式
+				SubSheet_StudentContent = append(SubSheet_StudentContent, BirthDay_Output)
 				SubSheet_StudentContent = append(SubSheet_StudentContent, strconv.Itoa(ExcelExportData.FillData.FillTime))
-				SubSheet_StudentContent = append(SubSheet_StudentContent, ExcelExportData.FillData.FillDate)
+				SubSheet_StudentContent = append(SubSheet_StudentContent, Date_Output)
 				Contentlenth := 0
 				for _, CellName := range SubSheet_StudentArea_OrderedKeys {
 					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), SubSheet_StudentContent[Contentlenth])
@@ -172,9 +184,9 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					"E": "作息全部的題數",
 					"F": "作息整體的精熟度",
 				}
-				
-				SubSheet_MainArea_OrderedKeys := []string{"A", "B", "C", "D", "E", "F"}  // 指定鍵的順序
-				
+
+				SubSheet_MainArea_OrderedKeys := []string{"A", "B", "C", "D", "E", "F"} // 指定鍵的順序
+
 				for _, CellName := range SubSheet_MainArea_OrderedKeys {
 					CellValue := SubSheet_MainArea[CellName]
 					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), CellValue)
@@ -240,16 +252,16 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					},
 					XAxis: excelize.ChartAxis{
 						Font: excelize.Font{
-						    Bold:      true,
-						    Italic:    true,
-						    Color:     "#000000",
+							Bold:   true,
+							Italic: true,
+							Color:  "#000000",
 						},
 					},
 					YAxis: excelize.ChartAxis{
 						Font: excelize.Font{
-						    Bold:      false,
-						    Italic:    false,
-						    Color:     "#777777",
+							Bold:   false,
+							Italic: false,
+							Color:  "#777777",
 						},
 					},
 					PlotArea: excelize.ChartPlotArea{
@@ -260,8 +272,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 						ShowVal:         true,
 					},
 					ShowBlanksAs: "gap",
-				})
-				err != nil {
+				}); err != nil {
 					fmt.Println(err)
 				}
 				// Classify Detail
@@ -322,9 +333,9 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					"F": "作息全部的題數",
 					"G": "作息整體的精熟度",
 				}
-				
-				SubSheet_DetailArea_OrderedKeys := []string{"A", "B", "C", "D", "E", "F", "G"}  // 指定有序的鍵列表
-				
+
+				SubSheet_DetailArea_OrderedKeys := []string{"A", "B", "C", "D", "E", "F", "G"} // 指定有序的鍵列表
+
 				for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 					CellValue := SubSheet_DetailArea[CellName]
 					ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), CellValue)
@@ -383,9 +394,9 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					TopicEndCell := SubSheetCell
 					//Combine A Cell
 					ExcelFile.MergeCell(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), fmt.Sprintf("A%d", TopicEndCell))
-					if(FuncTopicLength != 0){
+					if FuncTopicLength != 0 {
 						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), ExcelExportData.QuestionGrade.QuesitonContent[FuncTopicLength-1].BigTopicName)
-					}else{
+					} else {
 						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), "總和")
 						SubSheetCell++
 						break
@@ -394,7 +405,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 				}
 				SubSheetCell++
 				// SubSheet_FuncChart
-				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", (SubSheet_ChartCellStart + 7 )), &excelize.Chart{
+				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", (SubSheet_ChartCellStart+7)), &excelize.Chart{
 					Type: excelize.Col,
 					Series: []excelize.ChartSeries{
 						{
@@ -422,16 +433,16 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					},
 					XAxis: excelize.ChartAxis{
 						Font: excelize.Font{
-						    Bold:      true,
-						    Italic:    true,
-						    Color:     "#000000",
+							Bold:   true,
+							Italic: true,
+							Color:  "#000000",
 						},
 					},
 					YAxis: excelize.ChartAxis{
 						Font: excelize.Font{
-						    Bold:      false,
-						    Italic:    false,
-						    Color:     "#777777",
+							Bold:   false,
+							Italic: false,
+							Color:  "#777777",
 						},
 					},
 					PlotArea: excelize.ChartPlotArea{
@@ -530,13 +541,13 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 							Contentlenth++
 						}
 					}
-					
+
 					TopicEndCell := SubSheetCell
 					//Combine A Cell
 					ExcelFile.MergeCell(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), fmt.Sprintf("A%d", TopicEndCell))
-					if(DevTopicLength != 0){
+					if DevTopicLength != 0 {
 						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), ExcelExportData.QuestionGrade.QuesitonContent[DevTopicLength-1].BigTopicName)
-					}else{
+					} else {
 						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), "總和")
 						SubSheetCell++
 						break
@@ -545,7 +556,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 				}
 				SubSheetCell++
 				// SubSheet_DevChart
-				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", (SubSheet_ChartCellStart + 7 )), &excelize.Chart{
+				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", (SubSheet_ChartCellStart+7)), &excelize.Chart{
 					Type: excelize.Col,
 					Series: []excelize.ChartSeries{
 						{
@@ -573,16 +584,16 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					},
 					XAxis: excelize.ChartAxis{
 						Font: excelize.Font{
-						    Bold:      true,
-						    Italic:    true,
-						    Color:     "#000000",
+							Bold:   true,
+							Italic: true,
+							Color:  "#000000",
 						},
 					},
 					YAxis: excelize.ChartAxis{
 						Font: excelize.Font{
-						    Bold:      false,
-						    Italic:    false,
-						    Color:     "#777777",
+							Bold:   false,
+							Italic: false,
+							Color:  "#777777",
 						},
 					},
 					PlotArea: excelize.ChartPlotArea{
@@ -654,17 +665,17 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					TopicEndCell := SubSheetCell
 					//Combine A Cell
 					ExcelFile.MergeCell(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), fmt.Sprintf("A%d", TopicEndCell))
-					if(OutTopicLength != 0){
+					if OutTopicLength != 0 {
 						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), ExcelExportData.QuestionGrade.QuesitonContent[OutTopicLength-1].BigTopicName)
-						}else{
-							ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), "總和")
-							SubSheetCell++
-							break
-						}
+					} else {
+						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), "總和")
+						SubSheetCell++
+						break
+					}
 					SubSheetCell++
 				}
 				// SubSheet_OutChart
-				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", (SubSheet_ChartCellStart + 7 )), &excelize.Chart{
+				ExcelFile.AddChart(QuestionnaireSheet, fmt.Sprintf("K%d", (SubSheet_ChartCellStart+7)), &excelize.Chart{
 					Type: excelize.Col,
 					Series: []excelize.ChartSeries{
 						{
@@ -692,16 +703,16 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					},
 					XAxis: excelize.ChartAxis{
 						Font: excelize.Font{
-						    Bold:      true,
-						    Italic:    true,
-						    Color:     "#000000",
+							Bold:   true,
+							Italic: true,
+							Color:  "#000000",
 						},
 					},
 					YAxis: excelize.ChartAxis{
 						Font: excelize.Font{
-						    Bold:      false,
-						    Italic:    false,
-						    Color:     "#777777",
+							Bold:   false,
+							Italic: false,
+							Color:  "#777777",
 						},
 					},
 					PlotArea: excelize.ChartPlotArea{
