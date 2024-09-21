@@ -40,7 +40,7 @@ func RegisterAccount(User types.BackendUsers) { //建立帳號
 	fmt.Println(result)
 }
 
-func RegisterFrontEndAccount(User types.FrontendUsers_Register) bool {
+func RegisterFrontEndAccount(User types.FrontendUsersRegister) bool {
 	var db = Routines.MeisrDB
 	if User.Quantity != 0 { //批量新增
 		createvalue := 1

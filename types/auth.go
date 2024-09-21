@@ -16,8 +16,7 @@ type BackendUsers struct {
 	Permission int    `json:"Permission"`
 }
 
-//for 單一新增
-type FrontendUsers_Register struct {
+type FrontendUsersRegister struct {
 	Account    string `json:"Account"`
 	SchoolCode string `json:"SchoolCode"`
 	Password   string `json:"Password"`
