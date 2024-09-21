@@ -68,7 +68,7 @@ func InitRouters() *gin.Engine {
 			UserManageRoute := ManageRouter.Group("/Users")
 			{
 				UserManageRoute.GET("/", controllers.UserManage("Search", "0"))
-				// UserManageRoute.POST("/UserInsert")
+				UserManageRoute.POST("/UserInsert", controllers.ClaMEISR_Register)
 				UserManageRoute.POST("/UserUpdate", controllers.UserManage("Update", "0"))
 				// UserManageRoute.POST("/UserDelete")
 			}

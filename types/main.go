@@ -10,21 +10,6 @@ type SearchUsers struct {
 	Counseling    string `json:"Counseling"`
 	RoutinesBased string `json:"RoutinesBased"`
 }
-type FrontendUsers struct {
-	Account    string `json:"Account" gorm:"column:Username"`
-	Username   string `json:"Username" gorm:"column:TeacherName"`
-	SchoolCode string `json:"SchoolCode"`
-	SchoolName string `json:"SchoolName"`
-	IfFill     int    `json:"IfFill"`
-	CreateAt   string `json:"CreateAt" gorm:"column:created_at"`
-}
-type BackendUsers struct {
-	Account    string `json:"Account" gorm:"account"`
-	Username   string `json:"username" gorm:"username"`
-	SchoolCode string `json:"SchoolCode"`
-	Password   string `json:"Password"`
-	Permission int    `json:"Permission"`
-}
 
 type Schools struct {
 	SchoolName string    `json:"SchoolName" gorm:"column:SchoolName"`

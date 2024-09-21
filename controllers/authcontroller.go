@@ -62,3 +62,13 @@ func Login(c *gin.Context) {
 		"name":  user.Username, // Include the user profile data here
 	})
 }
+
+func ClaMEISR_Register(c *gin.Context) {
+	var user types.FrontendUsers_Register
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+	models.RegisterFrontEndAccount(user)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Registration successful"})
+}
