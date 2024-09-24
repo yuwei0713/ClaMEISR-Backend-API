@@ -69,7 +69,9 @@ func ClaMEISR_Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 	fmt.Print(user)
-	models.RegisterFrontEndAccount(user)
-
-	c.JSON(http.StatusOK, gin.H{"message": "Registration successful"})
+	returnuser, err := models.RegisterFrontEndAccount(user)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+	c.JSON(http.StatusOK, gin.H{"adduser": returnuser})
 }

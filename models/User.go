@@ -40,7 +40,8 @@ func RegisterAccount(User types.BackendUsers) { //建立帳號
 	fmt.Println(result)
 }
 
-func RegisterFrontEndAccount(User types.FrontendUsersRegister) bool {
+func RegisterFrontEndAccount(User types.FrontendUsersRegister) ([]string, error) {
+	returnuser := make([]string, 0)
 	var db = Routines.MeisrDB
 	if User.Quantity != 0 { //批量新增
 		createvalue := 1
@@ -55,18 +56,19 @@ func RegisterFrontEndAccount(User types.FrontendUsersRegister) bool {
 				hashedPassword, err := utils.BcryptHash(CurrentPassword) //建立密碼
 				if err != nil {
 					// c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
-					return false
+					return nil, err
 				}
-				db.Exec("INSERT INTO users (username, schoolnumber, password, created_at, updated_at) VALUES(?,?,?,?,?)", User.Account, User.SchoolCode, hashedPassword, formattime, formattime)
-				db.Exec("INSERT INTO userdatatable (Username, SchoolCode) VALUES (?,?)", User.Account, User.SchoolCode)
+				db.Exec("INSERT INTO users (username, schoolnumber, password, created_at, updated_at) VALUES(?,?,?,?,?)", CurrentAccount, User.SchoolCode, hashedPassword, formattime, formattime)
+				db.Exec("INSERT INTO userdatatable (Username, SchoolCode) VALUES (?,?)", CurrentAccount, User.SchoolCode)
 				createvalue++
+				returnuser = append(returnuser, CurrentAccount)
 			}
 			currentnumber++
 			if createvalue > User.Quantity {
 				break
 			}
 		}
-		return true
+		return returnuser, nil
 	} else { //單一新增
 		noneuse := RegisterFrondendVerify(User.Account)
 		if noneuse { //可以使用該帳號名稱
@@ -74,17 +76,18 @@ func RegisterFrontEndAccount(User types.FrontendUsersRegister) bool {
 			// fmt.Println(string(hashedPassword))
 			if err != nil {
 				// c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
-				return false
+				return nil, err
 			}
 			currentTime := time.Now()
 			formattime := currentTime.Format("2006-01-02 15:04:05")
 			db.Exec("INSERT INTO users (username, schoolnumber, password, created_at, updated_at) VALUES(?,?,?,?,?)", User.Account, User.SchoolCode, hashedPassword, formattime, formattime)
 			db.Exec("INSERT INTO userdatatable (Username, SchoolCode) VALUES (?,?)", User.Account, User.SchoolCode)
-			return true
+			returnuser = append(returnuser, User.Account)
+			return returnuser, nil
 		}
 	}
 
-	return true
+	return nil, fmt.Errorf("something wrong")
 }
 
 func LoginVerify(Account string) (string, bool) { //驗證帳號
