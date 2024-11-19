@@ -187,21 +187,21 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 					SubSheet_StudentContent = append(SubSheet_StudentContent, ExcelExportData.ChildDetail.Child.StudentName)
 					SubSheet_StudentContent = append(SubSheet_StudentContent, ExcelExportData.ChildDetail.Child.Gender)
 					switch ExcelExportData.ChildDetail.Status {
-					case "confirm":
+					case "特殊生":
 						SubSheet_StudentContent = append(SubSheet_StudentContent, "特殊生")
 						if ExcelExportData.ChildDetail.ChildDiagnosis.Diagnosis == "other" {
 							SubSheet_StudentContent = append(SubSheet_StudentContent, ExcelExportData.ChildDetail.ChildDiagnosis.OtherDiagnosis)
 						} else {
 							SubSheet_StudentContent = append(SubSheet_StudentContent, fmt.Sprintf("%s:%s", ExcelExportData.ChildDetail.ChildDiagnosis.Diagnosis, ExcelExportData.ChildDetail.ChildDiagnosis.Degree))
 						}
-					case "suspected":
+					case "疑似生":
 						SubSheet_StudentContent = append(SubSheet_StudentContent, "疑似生")
 						if ExcelExportData.ChildDetail.ChildDiagnosis.Diagnosis == "other" {
 							SubSheet_StudentContent = append(SubSheet_StudentContent, ExcelExportData.ChildDetail.ChildDiagnosis.OtherDiagnosis)
 						} else {
 							SubSheet_StudentContent = append(SubSheet_StudentContent, ExcelExportData.ChildDetail.ChildDiagnosis.Diagnosis)
 						}
-					case "none":
+					case "一般生":
 						SubSheet_StudentContent = append(SubSheet_StudentContent, "一般生")
 						SubSheet_StudentContent = append(SubSheet_StudentContent, "無")
 					}
