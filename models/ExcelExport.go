@@ -27,35 +27,42 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 	var db = Routines.MeisrDB
 	//get school count
 	var TotalSchool = make([]types.Schools, 0)
-	db.Table("schooltable").Select("DISTINCT SchoolName ,SchoolCode").Where("SchoolCode != 99").Find(&TotalSchool)
+	db.Table("schooltable").Select("DISTINCT SchoolName ,SchoolCode").Where("SchoolCode != 99").Find(&TotalSchool) //學校名稱以及學校代碼的對照表
 
-	var EachSchool types.Excel_SchoolData
-	//get all school code without '其他'
-	schoolrow, _ := db.Table("schooltable").Select("*").Where("SchoolCode != 99").Rows()
-	YearAndSemesterCell := 1 //學年期行數Cell
-	YearAndSemester := fmt.Sprintf("%s-%s", Year, Semester)
-	ExcelFile.SetCellValue(MainSheet, fmt.Sprintf("A%d", YearAndSemesterCell), YearAndSemester) //A1
+	schoolrow, _ := db.Table("schooltable").Select("*").Where("SchoolCode != 99").Rows()        // 學校每個班級代碼以及相對應的學校代碼跟班級名稱
+	YearAndSemesterCell := 1                                                                    //學年期行數Cell
+	YearAndSemester := fmt.Sprintf("%s-%s", Year, Semester)                                     //整合學年學期
+	ExcelFile.SetCellValue(MainSheet, fmt.Sprintf("A%d", YearAndSemesterCell), YearAndSemester) //A1,設定在第A欄第一列
 
-	AreaCell := 2 //first area start from 2
-	MainArea := map[string]string{
+	AreaCell := 2                  //從第二裂開始寫
+	MainArea := map[string]string{ // 處理execl 欄位(從第B欄開始)以及順序
 		"B": "學校",
 		"C": "班級",
-		"D": "教師",
-		"E": "學生",
-		"F": "問卷",
-		"G": "次數",
-		"H": "日期",
+		"D": "座號",
+		"E": "教師",
+		"F": "學生",
+		"G": "性別",
+		"H": "兒童狀態",
+		"I": "診斷",
+		"J": "生日",
+		"K": "第幾次填寫",
+		"L": "填寫日期",
+		"M": "問卷",
+		"N": "次數",
+		"O": "日期",
 	}
-	MainArea_orderedKeys := []string{"B", "C", "D", "E", "F", "G", "H"}
+	MainArea_orderedKeys := []string{"B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O"}
 	for _, CellName := range MainArea_orderedKeys {
-		CellValue := MainArea[CellName]
-		ExcelFile.SetCellValue(MainSheet, fmt.Sprintf("%s%d", CellName, AreaCell), CellValue)
+		CellValue := MainArea[CellName]                                                       //對應的中文標籤
+		ExcelFile.SetCellValue(MainSheet, fmt.Sprintf("%s%d", CellName, AreaCell), CellValue) //生成儲存格的地址(第X欄第X列)
 	}
+	var EachSchool types.Excel_SchoolData
+	//get all school code without '其他'
 	AreaCell++ // +1 start content
 	for schoolrow.Next() {
 		var Excel_FillStore types.Excel_FillStore
-		db.ScanRows(schoolrow, &EachSchool) // Get School and Class
-				query := `
+		db.ScanRows(schoolrow, &EachSchool) //**** Get School and Class
+		query := ` 
 			SELECT filldata.*,
 			    CASE 
 			        WHEN filldata.Finish = 0 AND filldata.FillTime > 1
@@ -69,6 +76,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 			    AND student.SchoolCode = ?
 			    AND student.ClassCode = ?
 				AND NOT (filldata.FillTime = 1 AND filldata.Finish = 0)`
+		//把fillfinish 跟 schootable 做 join，把兩者資料整合(問卷填寫+學校班級學生資料)
 		questionstorerow, err := db.Raw(query, Year, Semester, EachSchool.SchoolCode, EachSchool.ClassCode).Rows()
 		if err != nil {
 			// 處理錯誤
@@ -77,7 +85,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 		for questionstorerow.Next() {
 			var ExcelExportData types.ExcelExportData
 			db.ScanRows(questionstorerow, &Excel_FillStore) // Get Questionstoretable data//
-			if Excel_FillStore.FillTime > 0{
+			if Excel_FillStore.FillTime > 0 {               //確定該學生有
 				for CurrentFillTime := 1; CurrentFillTime <= Excel_FillStore.FillTime; CurrentFillTime++ {
 					SubSheetCell := 2
 					//StudentID => Student Data (Basic , Status, Diagnosis)
@@ -108,14 +116,37 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 						B ~ H + TitleCell 標題(學校，班級，教師，學生，問卷，次數，日期)
 						(J)K ~ N + TotalCountCell 總數(學校名稱，班級數，教師數，學生數)，最後一行放入總和(學校數，班級數，教師數，學生數)
 					*/
-	
+
 					layout := time.RFC3339 // 標準時間格式
 					t, err := time.Parse(layout, ExcelExportData.FillData.FillDate)
 					if err != nil {
 						fmt.Println("Error parsing date:", err)
 					}
+					switch ExcelExportData.ChildDetail.Status {
+					case "confirm":
+						ExcelExportData.ChildDetail.Status = "特殊生"
+					case "suspected":
+						ExcelExportData.ChildDetail.Status = "疑似生"
+					case "none":
+						ExcelExportData.ChildDetail.Status = "一般生"
+					}
 					Date_Output := t.Format("2006-01-02") // 轉換為 YYYY-MM-DD 格式
-					ContentValue := [...]string{EachSchool.SchoolName, EachSchool.ClassName, ExcelExportData.ChildDetail.Child.TeacherName, ExcelExportData.ChildDetail.Child.StudentName, ExcelExportData.FillData.QuestionName, strconv.Itoa(ExcelExportData.FillData.FillTime), Date_Output}
+					ContentValue := [...]string{
+						EachSchool.SchoolName, // B: 學校
+						EachSchool.ClassName,  // C: 班級
+						strconv.Itoa(ExcelExportData.ChildDetail.Child.StudentCode), // D: 座號
+						ExcelExportData.ChildDetail.Child.TeacherName,               // E: 教師
+						ExcelExportData.ChildDetail.Child.StudentName,               // F: 學生
+						ExcelExportData.ChildDetail.Child.Gender,                    // G: 性別
+						ExcelExportData.ChildDetail.Status,                          // H: 兒童狀態
+						ExcelExportData.ChildDetail.ChildDiagnosis.Diagnosis,        // I: 診斷
+						ExcelExportData.ChildDetail.Child.BirthDay,                  // J: 生日
+						strconv.Itoa(CurrentFillTime),                               // K: 第幾次填寫
+						ExcelExportData.FillData.FillDate,                           // L: 填寫日期
+						ExcelExportData.FillData.QuestionName,                       // M: 問卷
+						strconv.Itoa(Excel_FillStore.FillTime),                      // N: 次數
+						Date_Output,                                                 // O: 日期
+					}
 					i := 0
 					for _, CellName := range MainArea_orderedKeys {
 						ExcelFile.SetCellValue(MainSheet, fmt.Sprintf("%s%d", CellName, AreaCell), ContentValue[i])
@@ -195,9 +226,9 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 						"E": "作息全部的題數",
 						"F": "作息整體的精熟度",
 					}
-	
+
 					SubSheet_MainArea_OrderedKeys := []string{"A", "B", "C", "D", "E", "F"} // 指定鍵的順序
-	
+
 					for _, CellName := range SubSheet_MainArea_OrderedKeys {
 						CellValue := SubSheet_MainArea[CellName]
 						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), CellValue)
@@ -344,9 +375,9 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 						"F": "作息全部的題數",
 						"G": "作息整體的精熟度",
 					}
-	
+
 					SubSheet_DetailArea_OrderedKeys := []string{"A", "B", "C", "D", "E", "F", "G"} // 指定有序的鍵列表
-	
+
 					for _, CellName := range SubSheet_DetailArea_OrderedKeys {
 						CellValue := SubSheet_DetailArea[CellName]
 						ExcelFile.SetCellValue(QuestionnaireSheet, fmt.Sprintf("%s%d", CellName, SubSheetCell), CellValue)
@@ -552,7 +583,7 @@ func DefaultExport(Year string, Semester string) *excelize.File {
 								Contentlenth++
 							}
 						}
-	
+
 						TopicEndCell := SubSheetCell
 						//Combine A Cell
 						ExcelFile.MergeCell(QuestionnaireSheet, fmt.Sprintf("A%d", TopicStartCell), fmt.Sprintf("A%d", TopicEndCell))
